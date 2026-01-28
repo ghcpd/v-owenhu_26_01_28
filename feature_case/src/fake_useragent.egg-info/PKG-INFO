@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: fake-useragent
+Version: 1.4.0
+Summary: Up-to-date simple useragent faker with real world database
+Requires-Python: >=3.8
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"

@@ -1,0 +1,13 @@
+pyproject.toml
+src/fake_useragent/__init__.py
+src/fake_useragent/errors.py
+src/fake_useragent/fake.py
+src/fake_useragent/log.py
+src/fake_useragent/settings.py
+src/fake_useragent/utils.py
+src/fake_useragent.egg-info/PKG-INFO
+src/fake_useragent.egg-info/SOURCES.txt
+src/fake_useragent.egg-info/dependency_links.txt
+src/fake_useragent.egg-info/requires.txt
+src/fake_useragent.egg-info/top_level.txt
+tests/test_platforms.py
