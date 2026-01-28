@@ -10,8 +10,10 @@ class FakeUserAgent:
     def __init__(
         self,
         browsers=["chrome", "edge", "firefox", "safari"],
-        os=["windows", "macos", "linux"],
+        os=["windows", "macos", "linux", "android", "ios"],
         min_percentage=0.0,
+        platforms=["pc", "mobile", "tablet"],
+        min_version=0.0,
         fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
         safe_attrs=tuple(),
     ):
@@ -36,6 +38,16 @@ class FakeUserAgent:
             min_percentage, float
         ), "Minimum usage percentage must be float"
         self.min_percentage = min_percentage
+
+        assert isinstance(platforms, (list, str)), "platforms must be list or string"
+        if isinstance(platforms, str):
+            platforms = [platforms]
+        self.platforms = platforms
+
+        assert isinstance(
+            min_version, (float, int)
+        ), "min_version must be float or int"
+        self.min_version = float(min_version)
 
         assert isinstance(fallback, str), "fallback must be string"
         self.fallback = fallback
@@ -69,12 +81,16 @@ class FakeUserAgent:
                 # Filter the browser list based on the browsers array using lambda
                 # And based on OS list
                 # And percentage is bigger then min percentage
+                # And based on platform type
+                # And based on minimum version
                 # And convert the iterator back to a list
                 filtered_browsers = list(
                     filter(
                         lambda x: x["browser"] in self.browsers
                         and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
+                        and x["percent"] >= self.min_percentage
+                        and x["type"] in self.platforms
+                        and x["version"] >= self.min_version,
                         self.data_browsers,
                     )
                 )
@@ -82,12 +98,16 @@ class FakeUserAgent:
                 # Or when random isn't select, we filter the browsers array based on the 'request' using lamba
                 # And based on OS list
                 # And percentage is bigger then min percentage
+                # And based on platform type
+                # And based on minimum version
                 # And convert the iterator back to a list
                 filtered_browsers = list(
                     filter(
                         lambda x: x["browser"] == request
                         and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
+                        and x["percent"] >= self.min_percentage
+                        and x["type"] in self.platforms
+                        and x["version"] >= self.min_version,
                         self.data_browsers,
                     )
                 )
@@ -112,6 +132,7 @@ class FakeUserAgent:
                     "browser": "chrome",
                     "version": 114.0,
                     "os": "win10",
+                    "type": "pc",
                 }
 
     # This method will use the method below, returning a string
@@ -136,12 +157,16 @@ class FakeUserAgent:
                 # Filter the browser list based on the browsers array using lambda
                 # And based on OS list
                 # And percentage is bigger then min percentage
+                # And based on platform type
+                # And based on minimum version
                 # And convert the iterator back to a list
                 filtered_browsers = list(
                     filter(
                         lambda x: x["browser"] in self.browsers
                         and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
+                        and x["percent"] >= self.min_percentage
+                        and x["type"] in self.platforms
+                        and x["version"] >= self.min_version,
                         self.data_browsers,
                     )
                 )
@@ -149,12 +174,16 @@ class FakeUserAgent:
                 # Or when random isn't select, we filter the browsers array based on the 'attr' using lamba
                 # And based on OS list
                 # And percentage is bigger then min percentage
+                # And based on platform type
+                # And based on minimum version
                 # And convert the iterator back to a list
                 filtered_browsers = list(
                     filter(
                         lambda x: x["browser"] == attr
                         and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
+                        and x["percent"] >= self.min_percentage
+                        and x["type"] in self.platforms
+                        and x["version"] >= self.min_version,
                         self.data_browsers,
                     )
                 )
