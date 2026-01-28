@@ -6,11 +6,17 @@ from fake_useragent.log import logger
 from fake_useragent.utils import load, str_types
 
 
+_DEFAULT_OS = ["windows", "macos", "linux"]
+_DEFAULT_PLATFORMS = ["pc", "mobile", "tablet"]
+
+
 class FakeUserAgent:
     def __init__(
         self,
         browsers=["chrome", "edge", "firefox", "safari"],
-        os=["windows", "macos", "linux"],
+        os=_DEFAULT_OS,
+        platforms=_DEFAULT_PLATFORMS,
+        min_version=0.0,
         min_percentage=0.0,
         fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
         safe_attrs=tuple(),
@@ -22,6 +28,7 @@ class FakeUserAgent:
         self.browsers = browsers
 
         assert isinstance(os, (list, str)), "OS must be list or string"
+        os_is_default = os is _DEFAULT_OS
         if isinstance(os, str):
             os = [os]
         # OS replacement (windows -> [win10, win7])
@@ -31,6 +38,23 @@ class FakeUserAgent:
                 self.os.extend(settings.OS_REPLACEMENTS[os_name])
             else:
                 self.os.append(os_name)
+
+        assert isinstance(platforms, (list, str)), "platforms must be list or string"
+        if isinstance(platforms, str):
+            platforms = [platforms]
+        self.platforms = [platform.lower() for platform in platforms]
+
+        # If caller didn't specify OS (left it as default) but requested mobile/tablet
+        # platforms, expand OS filters to include mobile OSes present in the dataset.
+        if os_is_default and any(
+            platform in self.platforms for platform in ("mobile", "tablet")
+        ):
+            for mobile_os in ("android", "ios"):
+                if mobile_os not in self.os:
+                    self.os.append(mobile_os)
+
+        assert isinstance(min_version, (int, float)), "min_version must be int or float"
+        self.min_version = float(min_version)
 
         assert isinstance(
             min_percentage, float
@@ -74,6 +98,8 @@ class FakeUserAgent:
                     filter(
                         lambda x: x["browser"] in self.browsers
                         and x["os"] in self.os
+                        and x.get("type") in self.platforms
+                        and x.get("version", 0.0) >= self.min_version
                         and x["percent"] >= self.min_percentage,
                         self.data_browsers,
                     )
@@ -87,6 +113,8 @@ class FakeUserAgent:
                     filter(
                         lambda x: x["browser"] == request
                         and x["os"] in self.os
+                        and x.get("type") in self.platforms
+                        and x.get("version", 0.0) >= self.min_version
                         and x["percent"] >= self.min_percentage,
                         self.data_browsers,
                     )
@@ -112,6 +140,7 @@ class FakeUserAgent:
                     "browser": "chrome",
                     "version": 114.0,
                     "os": "win10",
+                    "type": "pc",
                 }
 
     # This method will use the method below, returning a string
@@ -141,6 +170,8 @@ class FakeUserAgent:
                     filter(
                         lambda x: x["browser"] in self.browsers
                         and x["os"] in self.os
+                        and x.get("type") in self.platforms
+                        and x.get("version", 0.0) >= self.min_version
                         and x["percent"] >= self.min_percentage,
                         self.data_browsers,
                     )
@@ -154,6 +185,8 @@ class FakeUserAgent:
                     filter(
                         lambda x: x["browser"] == attr
                         and x["os"] in self.os
+                        and x.get("type") in self.platforms
+                        and x.get("version", 0.0) >= self.min_version
                         and x["percent"] >= self.min_percentage,
                         self.data_browsers,
                     )
