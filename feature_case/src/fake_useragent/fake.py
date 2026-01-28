@@ -11,7 +11,9 @@ class FakeUserAgent:
         self,
         browsers=["chrome", "edge", "firefox", "safari"],
         os=["windows", "macos", "linux"],
+        platforms=["pc", "mobile", "tablet"],
         min_percentage=0.0,
+        min_version=0.0,
         fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
         safe_attrs=tuple(),
     ):
@@ -22,6 +24,7 @@ class FakeUserAgent:
         self.browsers = browsers
 
         assert isinstance(os, (list, str)), "OS must be list or string"
+        os_is_default = os == ["windows", "macos", "linux"]
         if isinstance(os, str):
             os = [os]
         # OS replacement (windows -> [win10, win7])
@@ -33,9 +36,26 @@ class FakeUserAgent:
                 self.os.append(os_name)
 
         assert isinstance(
+            platforms, (list, str)
+        ), "platforms must be list or string"
+        if isinstance(platforms, str):
+            platforms = [platforms]
+        self.platforms = platforms
+
+        if os_is_default and any(p in self.platforms for p in ["mobile", "tablet"]):
+            for os_name in ["android", "ios"]:
+                if os_name not in self.os:
+                    self.os.append(os_name)
+
+        assert isinstance(
             min_percentage, float
         ), "Minimum usage percentage must be float"
         self.min_percentage = min_percentage
+
+        assert isinstance(
+            min_version, (int, float)
+        ), "Minimum browser version must be int or float"
+        self.min_version = float(min_version)
 
         assert isinstance(fallback, str), "fallback must be string"
         self.fallback = fallback
@@ -74,7 +94,9 @@ class FakeUserAgent:
                     filter(
                         lambda x: x["browser"] in self.browsers
                         and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
+                        and x.get("type") in self.platforms
+                        and x["percent"] >= self.min_percentage
+                        and x.get("version", 0.0) >= self.min_version,
                         self.data_browsers,
                     )
                 )
@@ -87,7 +109,9 @@ class FakeUserAgent:
                     filter(
                         lambda x: x["browser"] == request
                         and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
+                        and x.get("type") in self.platforms
+                        and x["percent"] >= self.min_percentage
+                        and x.get("version", 0.0) >= self.min_version,
                         self.data_browsers,
                     )
                 )
@@ -141,7 +165,9 @@ class FakeUserAgent:
                     filter(
                         lambda x: x["browser"] in self.browsers
                         and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
+                        and x.get("type") in self.platforms
+                        and x["percent"] >= self.min_percentage
+                        and x.get("version", 0.0) >= self.min_version,
                         self.data_browsers,
                     )
                 )
@@ -154,7 +180,9 @@ class FakeUserAgent:
                     filter(
                         lambda x: x["browser"] == attr
                         and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
+                        and x.get("type") in self.platforms
+                        and x["percent"] >= self.min_percentage
+                        and x.get("version", 0.0) >= self.min_version,
                         self.data_browsers,
                     )
                 )
