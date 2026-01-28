@@ -14,6 +14,8 @@ class FakeUserAgent:
         min_percentage=0.0,
         fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
         safe_attrs=tuple(),
+        platforms=["pc", "mobile", "tablet"],
+        min_version=0.0,
     ):
         # Check inputs
         assert isinstance(browsers, (list, str)), "browsers must be list or string"
@@ -24,6 +26,9 @@ class FakeUserAgent:
         assert isinstance(os, (list, str)), "OS must be list or string"
         if isinstance(os, str):
             os = [os]
+        default_os = ["windows", "macos", "linux"]
+        is_default_os = os == default_os
+
         # OS replacement (windows -> [win10, win7])
         self.os = []
         for os_name in os:
@@ -52,45 +57,59 @@ class FakeUserAgent:
             ), "safe_attrs must be list\\tuple\\set of strings or unicode"
         self.safe_attrs = set(safe_attrs)
 
+        assert isinstance(platforms, (list, str)), "platforms must be list or string"
+        if isinstance(platforms, str):
+            platforms = [platforms]
+        # normalize platforms to lowercase strings
+        self.platforms = [p.lower() for p in platforms]
+
+        # If using default OS filters and requesting mobile/tablet, extend OS to cover common mobile OS values
+        if is_default_os and any(p in ("mobile", "tablet") for p in self.platforms):
+            for mobile_os in ("android", "ios"):
+                if mobile_os not in self.os:
+                    self.os.append(mobile_os)
+
+        assert isinstance(
+            min_version, (float, int)
+        ), "Minimum browser version must be float or int"
+        self.min_version = float(min_version)
+
         # Next, load our local data file into memory (browsers.json)
         self.data_browsers = load()
+
+    def _normalize_request(self, value: str) -> str:
+        """Normalize browser request strings using replacements and shortcuts."""
+        for _value, replacement in settings.REPLACEMENTS.items():
+            value = value.replace(_value, replacement)
+        value = value.lower()
+        return settings.SHORTCUTS.get(value, value)
+
+    def _filter_browsers(self, request: str):
+        """Filter loaded browser records according to current constraints."""
+        if request == "random":
+            allowed_browsers = self.browsers
+        else:
+            allowed_browsers = [request]
+
+        return [
+            x
+            for x in self.data_browsers
+            if x["browser"] in allowed_browsers
+            and x["os"] in self.os
+            and x["percent"] >= self.min_percentage
+            and x["type"] in self.platforms
+            and x["version"] >= self.min_version
+        ]
 
     # This method will return an object
     # Usage: ua.getBrowser('firefox')
     def getBrowser(self, request):
         try:
-            # Handle request value
-            for value, replacement in settings.REPLACEMENTS.items():
-                request = request.replace(value, replacement)
-            request = request.lower()
-            request = settings.SHORTCUTS.get(request, request)
+            # Normalize request value
+            request = self._normalize_request(request)
 
-            if request == "random":
-                # Filter the browser list based on the browsers array using lambda
-                # And based on OS list
-                # And percentage is bigger then min percentage
-                # And convert the iterator back to a list
-                filtered_browsers = list(
-                    filter(
-                        lambda x: x["browser"] in self.browsers
-                        and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
-                        self.data_browsers,
-                    )
-                )
-            else:
-                # Or when random isn't select, we filter the browsers array based on the 'request' using lamba
-                # And based on OS list
-                # And percentage is bigger then min percentage
-                # And convert the iterator back to a list
-                filtered_browsers = list(
-                    filter(
-                        lambda x: x["browser"] == request
-                        and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
-                        self.data_browsers,
-                    )
-                )
+            # Filter the browser list based on current constraints
+            filtered_browsers = self._filter_browsers(request)
 
             # Pick a random browser user-agent from the filtered browsers
             # And return the full dict
@@ -112,6 +131,8 @@ class FakeUserAgent:
                     "browser": "chrome",
                     "version": 114.0,
                     "os": "win10",
+                    "type": "pc",
+                    "percent": 0.0,
                 }
 
     # This method will use the method below, returning a string
@@ -126,38 +147,11 @@ class FakeUserAgent:
             return super(UserAgent, self).__getattr__(attr)
 
         try:
-            # Handle input value
-            for value, replacement in settings.REPLACEMENTS.items():
-                attr = attr.replace(value, replacement)
-            attr = attr.lower()
-            attr = settings.SHORTCUTS.get(attr, attr)
+            # Normalize input value
+            attr = self._normalize_request(attr)
 
-            if attr == "random":
-                # Filter the browser list based on the browsers array using lambda
-                # And based on OS list
-                # And percentage is bigger then min percentage
-                # And convert the iterator back to a list
-                filtered_browsers = list(
-                    filter(
-                        lambda x: x["browser"] in self.browsers
-                        and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
-                        self.data_browsers,
-                    )
-                )
-            else:
-                # Or when random isn't select, we filter the browsers array based on the 'attr' using lamba
-                # And based on OS list
-                # And percentage is bigger then min percentage
-                # And convert the iterator back to a list
-                filtered_browsers = list(
-                    filter(
-                        lambda x: x["browser"] == attr
-                        and x["os"] in self.os
-                        and x["percent"] >= self.min_percentage,
-                        self.data_browsers,
-                    )
-                )
+            # Filter the browser list based on current constraints
+            filtered_browsers = self._filter_browsers(attr)
 
             # Pick a random browser user-agent from the filtered browsers
             # And return the useragent string.
